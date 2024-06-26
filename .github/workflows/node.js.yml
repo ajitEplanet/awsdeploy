@@ -1,29 +1,49 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
-name: Node.js CICD
+name: Backend CI For Development
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
-
-    runs-on: self-hosted
-
-    strategy:
-      matrix:
-        node-version: [18.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+    runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
       with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: node app.js
+        node-version: '18.x'
+
+    - name: Debug SSH Variables here
+      run: |
+        echo "SSH_USERNAME: ${{ secrets.SSH_USERNAME }}"
+        echo "SSH_HOST: ${{ secrets.SSH_HOST }}"
+        echo "SSH_PORT: ${{ secrets.SSH_PORT }}"
+        echo "SSH_PRIVATE_KEY: ${{ secrets.SSH_PASSWORD }}"
+
+    - name: Install nvm & Deploy to server 
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        password: ${{ secrets.SSH_PASSWORD }}  # Use password instead of key
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          cd /home/ubuntu/myapp/awsdeploy
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_rsa_dm_backend
+          git pull origin main  # Pull the latest changes
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+          nvm install 18 
+          nvm use 18
+          npm install -g npm
+          npm install # Install only production dependencies
+
+          nodemon app.js
