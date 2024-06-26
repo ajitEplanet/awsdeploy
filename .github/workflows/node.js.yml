@@ -30,7 +30,7 @@ jobs:
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USERNAME }}
-        password: ${{ secrets.SSH_PASSWORD }}  # Use password instead of key
+        key: ${{ secrets.SSH_PASSWORD }}  # Use password instead of key
         port: ${{ secrets.SSH_PORT }}
         script: |
           cd /home/ubuntu/myapp/awsdeploy
