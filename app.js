@@ -6,7 +6,7 @@ const port = 8000;
 app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
-console.log('hi')
+console.log('hihello')
 app.listen(port, () => {
   console.log(`App running at http://localhost:${port}`);
 });
