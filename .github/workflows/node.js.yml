@@ -48,4 +48,11 @@ jobs:
           npm install -g npm
           npm install # Install only production dependencies
 
-          nodemon app.js
+          if pm2 id awsdeploy-backend-dev &> /dev/null; then
+            pm2 delete --silent awsdeploy-backend-dev
+            pm2 start "npm run dev" --name "awsdeploy-backend-dev"
+          else
+            echo "Process awsdeploy-backend-dev not found, starting it..."
+            pm2 start "npm run dev" --name "awsdeploy-backend-dev"
+          fi
+
