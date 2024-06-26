@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Backend CI For Development
 
 on:
   push:
@@ -6,25 +6,44 @@ on:
       - main
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout Repository
+      uses: actions/checkout@v2
 
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.5.3
-        with:
-          ssh-private-key: ${{ secrets.SSH_PASSWORD }}
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18.x'
 
-      - name: Deploy to EC2
-        env:
-          EC2_HOST: ${{ secrets.SSH_HOST }}
-          EC2_USER: ${{ secrets.SSH_USERNAME }}
-        run: |
-          ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
-            cd /home/ubuntu/awsdeploy
-            git pull origin dev
-            # Add any additional commands to build, test, or restart your application
-          EOF
+    - name: Debug SSH Variables here
+      run: |
+        echo "SSH_USERNAME: ${{ secrets.SSH_USERNAME }}"
+        echo "SSH_HOST: ${{ secrets.SSH_HOST }}"
+        echo "SSH_PORT: ${{ secrets.SSH_PORT }}"
+        echo "SSH_PRIVATE_KEY: ${{ secrets.SSH_PASSWORD }}"
+
+    - name: Install nvm & Deploy to server 
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PASSWORD }}  # Use password instead of key
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          cd /home/ubuntu/awsdeploy
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
+          git pull origin main  # Pull the latest changes
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+          nvm install 18 
+          nvm use 18
+          npm install -g npm
+          npm install # Install only production dependencies
+
+          nodemon app.js
